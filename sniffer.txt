@@ -1,0 +1,61 @@
+# sniffer.py
+# Basic Network Sniffer using scapy
+
+from scapy.all import sniff, IP, TCP, UDP, ICMP, Raw
+import time
+
+# Map protocol numbers to human-readable names
+PROTO_MAP = {
+    1: "ICMP",
+    6: "TCP",
+    17: "UDP",
+}
+
+def analyze_packet(pkt):
+    """Callback for each captured packet."""
+    if IP not in pkt:
+        return  # ignore non-IP packets
+
+    ip_layer = pkt[IP]
+    src_ip = ip_layer.src
+    dst_ip = ip_layer.dst
+    proto_num = ip_layer.proto
+    protocol = PROTO_MAP.get(proto_num, f"OTHER({proto_num})")
+    length = len(pkt)
+
+    # Try to get a small preview of the payload (if any)
+    payload_preview = ""
+    if Raw in pkt:
+        raw_bytes = bytes(pkt[Raw].load)
+        # show first 50 bytes only, decoded if possible
+        try:
+            payload_preview = raw_bytes[:50].decode(errors="ignore")
+        except Exception:
+            payload_preview = str(raw_bytes[:50])
+
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+
+    print(f"[{timestamp}] {src_ip} -> {dst_ip} | {protocol} | len={length}")
+    if payload_preview:
+        print(f"   Payload preview: {payload_preview!r}")
+    print("-" * 80)
+
+
+def main():
+    print("=== Basic Python Network Sniffer (Scapy) ===")
+    print("Press Ctrl+C to stop.\n")
+
+    # sniff() captures packets from the network interface
+    # store=False so packets are not kept in memory, only passed to callback
+    sniff(prn=analyze_packet, store=False)
+
+
+if _name_ == "_main_":
+    main()
+
+
+
+We implemented a basic network sniffer in Python using the Scapy library.
+The program captures live packets from the network interface and, for each IP packet, extracts the source IP, destination IP, protocol (TCP/UDP/ICMP), and total packet length.
+If a payload exists, the sniffer prints a short preview of the payload to help understand the content being transported.
+By observing the sequence of captured packets while browsing websites or pinging hosts, we can see how data flows between client and server and recognize the role of different protocols (e.g., TCP for reliable connections, UDP for lightweight datagrams, ICMP for diagnostic messages like ping).
